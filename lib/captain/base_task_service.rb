@@ -31,7 +31,10 @@ class Captain::BaseTaskService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
+    # Priority: hook settings endpoint_url > system CAPTAIN_OPEN_AI_ENDPOINT > default OpenAI endpoint
+    endpoint = openai_hook&.settings&.dig('endpoint_url').presence ||
+               InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence ||
+               'https://api.openai.com/'
     endpoint = endpoint.chomp('/')
     "#{endpoint}/v1"
   end
@@ -153,7 +156,12 @@ class Captain::BaseTaskService
   end
 
   def openai_hook
-    @openai_hook ||= account.hooks.find_by(app_id: 'openai', status: 'enabled')
+    # Explicit priority: 'openai' hook > 'openai_compatible' hook
+    # This ensures backward compatibility for accounts with existing openai integration
+    @openai_hook ||= account.hooks
+                            .where(app_id: %w[openai openai_compatible], status: 'enabled')
+                            .order(Arel.sql("CASE WHEN app_id = 'openai' THEN 0 ELSE 1 END"))
+                            .first
   end
 
   def system_api_key

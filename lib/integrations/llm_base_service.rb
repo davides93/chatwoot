@@ -83,7 +83,10 @@ class Integrations::LlmBaseService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
+    # Priority: hook settings endpoint_url > system CAPTAIN_OPEN_AI_ENDPOINT > default OpenAI endpoint
+    endpoint = hook&.settings&.dig('endpoint_url').presence ||
+               InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence ||
+               'https://api.openai.com/'
     endpoint = endpoint.chomp('/')
     "#{endpoint}/v1"
   end

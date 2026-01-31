@@ -317,4 +317,92 @@ RSpec.describe Captain::BaseTaskService do
       expect(result).to eq('Single question')
     end
   end
+
+  describe '#openai_hook' do
+    it 'returns openai hook when available' do
+      hook = create(:integrations_hook, :openai, account: account)
+      expect(service.send(:openai_hook)).to eq(hook)
+    end
+
+    it 'returns openai_compatible hook when available' do
+      hook = create(:integrations_hook, :openai_compatible, account: account)
+      expect(service.send(:openai_hook)).to eq(hook)
+    end
+
+    it 'returns openai hook when both exist with explicit priority' do
+      # Test with openai_compatible created first to verify explicit priority
+      create(:integrations_hook, :openai_compatible, account: account)
+      openai_hook = create(:integrations_hook, :openai, account: account)
+      # Create new service instance to avoid memoization
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      # openai is explicitly prioritized for backward compatibility
+      expect(new_service.send(:openai_hook)).to eq(openai_hook)
+    end
+
+    it 'returns nil when no hook exists' do
+      expect(service.send(:openai_hook)).to be_nil
+    end
+  end
+
+  describe '#api_base' do
+    it 'uses default OpenAI endpoint when no custom endpoint configured' do
+      expect(service.send(:api_base)).to eq('https://api.openai.com/v1')
+    end
+
+    it 'uses system CAPTAIN_OPEN_AI_ENDPOINT when configured' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://custom.openai.com/')
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      expect(new_service.send(:api_base)).to eq('https://custom.openai.com/v1')
+    end
+
+    it 'uses hook endpoint_url when openai_compatible hook exists' do
+      hook = create(:integrations_hook, :openai_compatible, account: account)
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      # Verify it uses the endpoint_url from the hook settings
+      expect(new_service.send(:api_base)).to eq('https://api.custom.com/v1')
+      # Verify it's the same value from the hook
+      expect(hook.settings['endpoint_url']).to eq('https://api.custom.com')
+    end
+
+    it 'prioritizes hook endpoint_url over system config' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://system.openai.com/')
+      create(:integrations_hook, :openai_compatible, account: account)
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      expect(new_service.send(:api_base)).to eq('https://api.custom.com/v1')
+    end
+
+    it 'chomps trailing slash from endpoint' do
+      create(:integrations_hook, :openai_compatible, account: account, settings: { api_key: 'key', endpoint_url: 'https://api.test.com/' })
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      expect(new_service.send(:api_base)).to eq('https://api.test.com/v1')
+    end
+  end
+
+  describe 'GitHub Models integration' do
+    it 'supports GitHub Models endpoint configuration' do
+      # GitHub Models uses https://models.github.ai/inference
+      hook = create(:integrations_hook, :openai_compatible, account: account,
+                    settings: {
+                      api_key: 'github_pat_token',
+                      endpoint_url: 'https://models.github.ai/inference',
+                      model_name: 'gpt-4o-mini'
+                    })
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+
+      expect(new_service.send(:openai_hook)).to eq(hook)
+      expect(new_service.send(:api_base)).to eq('https://models.github.ai/inference/v1')
+      expect(new_service.send(:api_key)).to eq('github_pat_token')
+    end
+
+    it 'supports GitHub Models without trailing slash' do
+      create(:integrations_hook, :openai_compatible, account: account,
+             settings: {
+               api_key: 'github_pat_token',
+               endpoint_url: 'https://models.github.ai/inference'
+             })
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+
+      expect(new_service.send(:api_base)).to eq('https://models.github.ai/inference/v1')
+    end
+  end
 end

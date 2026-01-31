@@ -56,6 +56,56 @@ openai:
       },
     ]
   visible_properties: ['api_key', 'label_suggestion']
+openai_compatible:
+  id: openai_compatible
+  logo: openai.png
+  i18n_key: openai_compatible
+  action: /openai_compatible
+  hook_type: account
+  allow_multiple_hooks: true
+  settings_json_schema:
+    {
+      'type': 'object',
+      'properties':
+        {
+          'api_key': { 'type': 'string' },
+          'endpoint_url': { 'type': 'string' },
+          'model_name': { 'type': 'string' },
+          'label_suggestion': { 'type': 'boolean' },
+        },
+      'required': ['api_key', 'endpoint_url'],
+      'additionalProperties': false,
+    }
+  settings_form_schema:
+    [
+      {
+        'label': 'API Key',
+        'type': 'text',
+        'name': 'api_key',
+        'validation': 'required',
+      },
+      {
+        'label': 'Endpoint URL',
+        'type': 'text',
+        'name': 'endpoint_url',
+        'placeholder': 'https://api.example.com',
+        'validation': 'required',
+      },
+      {
+        'label': 'Model Name',
+        'type': 'text',
+        'name': 'model_name',
+        'placeholder': 'gpt-4o-mini',
+        'help': 'Optional: Override the default model name for this provider',
+      },
+      {
+        'label': 'Show label suggestions',
+        'type': 'checkbox',
+        'name': 'label_suggestion',
+        'validation': '',
+      },
+    ]
+  visible_properties: ['endpoint_url', 'model_name', 'label_suggestion']
 linear:
   id: linear
   logo: linear.png
