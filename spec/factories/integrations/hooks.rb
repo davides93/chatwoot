@@ -27,6 +27,11 @@ FactoryBot.define do
       settings { { api_key: 'api_key' } }
     end
 
+    trait :openai_compatible do
+      app_id { 'openai_compatible' }
+      settings { { api_key: 'custom_api_key', endpoint_url: 'https://api.custom.com', model_name: 'custom-model' } }
+    end
+
     trait :linear do
       app_id { 'linear' }
       access_token { SecureRandom.hex }

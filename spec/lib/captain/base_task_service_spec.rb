@@ -317,4 +317,57 @@ RSpec.describe Captain::BaseTaskService do
       expect(result).to eq('Single question')
     end
   end
+
+  describe '#openai_hook' do
+    it 'returns openai hook when available' do
+      hook = create(:integrations_hook, :openai, account: account)
+      expect(service.send(:openai_hook)).to eq(hook)
+    end
+
+    it 'returns openai_compatible hook when available' do
+      hook = create(:integrations_hook, :openai_compatible, account: account)
+      expect(service.send(:openai_hook)).to eq(hook)
+    end
+
+    it 'returns openai hook when both openai and openai_compatible exist' do
+      openai_hook = create(:integrations_hook, :openai, account: account)
+      create(:integrations_hook, :openai_compatible, account: account)
+      expect(service.send(:openai_hook)).to eq(openai_hook)
+    end
+
+    it 'returns nil when no hook exists' do
+      expect(service.send(:openai_hook)).to be_nil
+    end
+  end
+
+  describe '#api_base' do
+    it 'uses default OpenAI endpoint when no custom endpoint configured' do
+      expect(service.send(:api_base)).to eq('https://api.openai.com/v1')
+    end
+
+    it 'uses system CAPTAIN_OPEN_AI_ENDPOINT when configured' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://custom.openai.com/')
+      service.instance_variable_set(:@openai_hook, nil)
+      expect(service.send(:api_base)).to eq('https://custom.openai.com/v1')
+    end
+
+    it 'uses hook endpoint_url when openai_compatible hook exists' do
+      create(:integrations_hook, :openai_compatible, account: account)
+      service.instance_variable_set(:@openai_hook, nil)
+      expect(service.send(:api_base)).to eq('https://api.custom.com/v1')
+    end
+
+    it 'prioritizes hook endpoint_url over system config' do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://system.openai.com/')
+      create(:integrations_hook, :openai_compatible, account: account)
+      service.instance_variable_set(:@openai_hook, nil)
+      expect(service.send(:api_base)).to eq('https://api.custom.com/v1')
+    end
+
+    it 'chomps trailing slash from endpoint' do
+      create(:integrations_hook, :openai_compatible, account: account, settings: { api_key: 'key', endpoint_url: 'https://api.test.com/' })
+      service.instance_variable_set(:@openai_hook, nil)
+      expect(service.send(:api_base)).to eq('https://api.test.com/v1')
+    end
+  end
 end
