@@ -329,12 +329,12 @@ RSpec.describe Captain::BaseTaskService do
       expect(service.send(:openai_hook)).to eq(hook)
     end
 
-    it 'returns openai hook when both exist due to alphabetical ordering' do
-      # Test with openai_compatible created first to verify order(:app_id) behavior
+    it 'returns openai hook when both exist with explicit priority' do
+      # Test with openai_compatible created first to verify explicit priority
       create(:integrations_hook, :openai_compatible, account: account)
       openai_hook = create(:integrations_hook, :openai, account: account)
       service.instance_variable_set(:@openai_hook, nil)
-      # openai is selected because 'openai' < 'openai_compatible' alphabetically
+      # openai is explicitly prioritized for backward compatibility
       expect(service.send(:openai_hook)).to eq(openai_hook)
     end
 
