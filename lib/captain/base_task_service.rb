@@ -158,10 +158,10 @@ class Captain::BaseTaskService
   def openai_hook
     # Explicit priority: 'openai' hook > 'openai_compatible' hook
     # This ensures backward compatibility for accounts with existing openai integration
-    @openai_hook ||= begin
-      hooks = account.hooks.where(app_id: %w[openai openai_compatible], status: 'enabled')
-      hooks.find { |h| h.app_id == 'openai' } || hooks.first
-    end
+    @openai_hook ||= account.hooks
+                            .where(app_id: %w[openai openai_compatible], status: 'enabled')
+                            .order(Arel.sql("CASE WHEN app_id = 'openai' THEN 0 ELSE 1 END"))
+                            .first
   end
 
   def system_api_key
