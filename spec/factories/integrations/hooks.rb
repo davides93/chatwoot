@@ -32,6 +32,11 @@ FactoryBot.define do
       settings { { api_key: 'custom_api_key', endpoint_url: 'https://api.custom.com', model_name: 'custom-model' } }
     end
 
+    trait :github_models do
+      app_id { 'openai_compatible' }
+      settings { { api_key: 'github_pat_test_token', endpoint_url: 'https://models.github.ai/inference', model_name: 'gpt-4o-mini' } }
+    end
+
     trait :linear do
       app_id { 'linear' }
       access_token { SecureRandom.hex }

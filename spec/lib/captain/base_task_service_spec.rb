@@ -377,4 +377,32 @@ RSpec.describe Captain::BaseTaskService do
       expect(new_service.send(:api_base)).to eq('https://api.test.com/v1')
     end
   end
+
+  describe 'GitHub Models integration' do
+    it 'supports GitHub Models endpoint configuration' do
+      # GitHub Models uses https://models.github.ai/inference
+      hook = create(:integrations_hook, :openai_compatible, account: account,
+                    settings: {
+                      api_key: 'github_pat_token',
+                      endpoint_url: 'https://models.github.ai/inference',
+                      model_name: 'gpt-4o-mini'
+                    })
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+
+      expect(new_service.send(:openai_hook)).to eq(hook)
+      expect(new_service.send(:api_base)).to eq('https://models.github.ai/inference/v1')
+      expect(new_service.send(:api_key)).to eq('github_pat_token')
+    end
+
+    it 'supports GitHub Models without trailing slash' do
+      create(:integrations_hook, :openai_compatible, account: account,
+             settings: {
+               api_key: 'github_pat_token',
+               endpoint_url: 'https://models.github.ai/inference'
+             })
+      new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+
+      expect(new_service.send(:api_base)).to eq('https://models.github.ai/inference/v1')
+    end
+  end
 end
