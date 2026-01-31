@@ -156,7 +156,9 @@ class Captain::BaseTaskService
   end
 
   def openai_hook
-    @openai_hook ||= account.hooks.where(app_id: %w[openai openai_compatible], status: 'enabled').first
+    # Priority: 'openai' hook > 'openai_compatible' hook
+    # This ensures backward compatibility for accounts with existing openai integration
+    @openai_hook ||= account.hooks.where(app_id: %w[openai openai_compatible], status: 'enabled').order(:app_id).first
   end
 
   def system_api_key

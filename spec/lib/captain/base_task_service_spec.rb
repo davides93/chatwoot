@@ -329,9 +329,18 @@ RSpec.describe Captain::BaseTaskService do
       expect(service.send(:openai_hook)).to eq(hook)
     end
 
-    it 'returns openai hook when both openai and openai_compatible exist' do
+    it 'returns openai hook when both openai and openai_compatible exist (openai first)' do
       openai_hook = create(:integrations_hook, :openai, account: account)
       create(:integrations_hook, :openai_compatible, account: account)
+      service.instance_variable_set(:@openai_hook, nil)
+      expect(service.send(:openai_hook)).to eq(openai_hook)
+    end
+
+    it 'returns openai hook when both exist (openai_compatible first)' do
+      compatible_hook = create(:integrations_hook, :openai_compatible, account: account)
+      openai_hook = create(:integrations_hook, :openai, account: account)
+      service.instance_variable_set(:@openai_hook, nil)
+      # openai should be preferred alphabetically (order by app_id)
       expect(service.send(:openai_hook)).to eq(openai_hook)
     end
 
