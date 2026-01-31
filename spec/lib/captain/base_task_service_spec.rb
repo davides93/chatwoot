@@ -356,9 +356,12 @@ RSpec.describe Captain::BaseTaskService do
     end
 
     it 'uses hook endpoint_url when openai_compatible hook exists' do
-      create(:integrations_hook, :openai_compatible, account: account)
+      hook = create(:integrations_hook, :openai_compatible, account: account)
       new_service = test_service_class.new(account: account, conversation_display_id: conversation.display_id)
+      # Verify it uses the endpoint_url from the hook settings
       expect(new_service.send(:api_base)).to eq('https://api.custom.com/v1')
+      # Verify it's the same value from the hook
+      expect(hook.settings['endpoint_url']).to eq('https://api.custom.com')
     end
 
     it 'prioritizes hook endpoint_url over system config' do

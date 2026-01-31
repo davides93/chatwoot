@@ -95,7 +95,7 @@ openai_compatible:
         'label': 'Model Name',
         'type': 'text',
         'name': 'model_name',
-        'placeholder': 'gpt-4o-mini (optional)',
+        'placeholder': 'gpt-4o-mini',
         'help': 'Optional: Override the default model name for this provider',
       },
       {
