@@ -40,7 +40,8 @@ describe Webhooks::Trigger do
         headers: base_headers,
         open_timeout: webhook_timeout,
         read_timeout: webhook_timeout,
-        validate_content_type: false
+        validate_content_type: false,
+        allow_private_network: false
       ).and_yield(fetch_result)
 
       trigger.execute(url, payload, webhook_type)
@@ -163,6 +164,40 @@ describe Webhooks::Trigger do
         expect(activity_message.message_type).to eq('activity')
         expect(activity_message.content).to eq(agent_bot_error_content)
       end
+
+      it 'passes allow_private_network: true to SafeFetch when the config flag is enabled' do
+        allow(GlobalConfig).to receive(:get_value).with('AGENT_BOT_WEBHOOK_ALLOW_PRIVATE_NETWORK').and_return(true)
+
+        expect(SafeFetch).to receive(:fetch).with(
+          url,
+          method: :post,
+          body: payload.to_json,
+          headers: base_headers,
+          open_timeout: webhook_timeout,
+          read_timeout: webhook_timeout,
+          validate_content_type: false,
+          allow_private_network: true
+        ).and_yield(fetch_result)
+
+        trigger.execute(url, payload, webhook_type)
+      end
+
+      it 'passes allow_private_network: false to SafeFetch when the config flag is disabled' do
+        allow(GlobalConfig).to receive(:get_value).with('AGENT_BOT_WEBHOOK_ALLOW_PRIVATE_NETWORK').and_return(false)
+
+        expect(SafeFetch).to receive(:fetch).with(
+          url,
+          method: :post,
+          body: payload.to_json,
+          headers: base_headers,
+          open_timeout: webhook_timeout,
+          read_timeout: webhook_timeout,
+          validate_content_type: false,
+          allow_private_network: false
+        ).and_yield(fetch_result)
+
+        trigger.execute(url, payload, webhook_type)
+      end
     end
 
     it 'handles 500 without raising for non-agent webhooks' do
@@ -188,7 +223,8 @@ describe Webhooks::Trigger do
           headers: base_headers,
           open_timeout: webhook_timeout,
           read_timeout: webhook_timeout,
-          validate_content_type: false
+          validate_content_type: false,
+          allow_private_network: false
         ).and_yield(fetch_result)
 
         trigger.execute(url, payload, webhook_type)
@@ -276,7 +312,8 @@ describe Webhooks::Trigger do
         headers: base_headers,
         open_timeout: default_timeout,
         read_timeout: default_timeout,
-        validate_content_type: false
+        validate_content_type: false,
+        allow_private_network: false
       ).and_yield(fetch_result)
 
       trigger.execute(url, payload, webhook_type)
@@ -294,7 +331,8 @@ describe Webhooks::Trigger do
         headers: base_headers,
         open_timeout: default_timeout,
         read_timeout: default_timeout,
-        validate_content_type: false
+        validate_content_type: false,
+        allow_private_network: false
       ).and_yield(fetch_result)
 
       trigger.execute(url, payload, webhook_type)

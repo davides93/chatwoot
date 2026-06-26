@@ -47,7 +47,8 @@ class Webhooks::Trigger
       headers: request_headers(body),
       open_timeout: webhook_timeout,
       read_timeout: webhook_timeout,
-      validate_content_type: false
+      validate_content_type: false,
+      allow_private_network: allow_private_network?
     ) { |_response| nil }
   end
 
@@ -120,6 +121,12 @@ class Webhooks::Trigger
     timeout = raw_timeout.presence&.to_i
 
     timeout&.positive? ? timeout : 5
+  end
+
+  def allow_private_network?
+    return false unless @webhook_type == :agent_bot_webhook
+
+    ActiveModel::Type::Boolean.new.cast(GlobalConfig.get_value('AGENT_BOT_WEBHOOK_ALLOW_PRIVATE_NETWORK'))
   end
 
   def retryable_agent_bot_error?(error)
