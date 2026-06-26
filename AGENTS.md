@@ -9,6 +9,7 @@
 - **Seed Account Sample Data (richer test data)**: `Seeders::AccountSeeder` is available as an internal utility and is exposed through Super Admin `Accounts#seed`, but can be used directly in dev workflows too:
   - UI path: Super Admin → Accounts → Seed (enqueues `Internal::SeedAccountJob`).
   - CLI path: `bundle exec rails runner "Internal::SeedAccountJob.perform_now(Account.find(<id>))"` (or call `Seeders::AccountSeeder.new(account: Account.find(<id>)).perform!` directly).
+- **DB Setup (idempotent)**: `bundle exec rails db:chatwoot_prepare` — creates schema if missing, seeds, migrates. Preferred over manual `db:create`+`db:migrate`+`db:seed` for a fresh database.
 - **Lint JS/Vue**: `pnpm eslint` / `pnpm eslint:fix`
 - **Lint Ruby**: `bundle exec rubocop -a`
 - **Test JS**: `pnpm test` or `pnpm test:watch`
@@ -18,6 +19,15 @@
 - **Ruby Version**: Manage Ruby via `rbenv` and install the version listed in `.ruby-version` (e.g., `rbenv install $(cat .ruby-version)`)
 - **rbenv setup**: Before running any `bundle` or `rspec` commands, init rbenv in your shell (`eval "$(rbenv init -)"`) so the correct Ruby/Bundler versions are used
 - Always prefer `bundle exec` for Ruby CLI tasks (rspec, rake, rubocop, etc.)
+
+## Local Preview Stack (Docker)
+
+- `docker-compose.preview.yaml` (prod-like, no hot-reload) and `docker-compose.preview.dev.yaml` (hot-reload) run a fully local stack (own postgres/redis/mailhog — never prod resources). Setup: `make preview_setup` / `make preview_dev_setup`, then `make preview` / `make preview_dev`. Env template: `.env.preview.example` → copy to `.env.preview` (gitignored).
+- `bundle exec rails preview:seed_admin` (`lib/tasks/preview_enhancements.rake`) creates a default SuperAdmin. Needed because `db/seeds.rb`'s demo account/user only seeds `unless Rails.env.production?` — a `RAILS_ENV=production` stack otherwise has no login at all.
+- `config/installation_config.yml` settings (e.g. `ENABLE_ACCOUNT_SIGNUP`) are DB-backed (`InstallationConfig` via `GlobalConfig`/`ConfigLoader`) — setting the same-named ENV var has **no effect** at runtime. Change via Super Admin UI or seed the DB directly.
+- In any `docker-compose*.yaml`, a bare `$VAR` inside a service's `command:` is interpolated by Compose itself at parse time from the top-level `.env` file — NOT from that service's own `env_file:`. Escape as `$$VAR` to defer expansion to the container's runtime shell (see `redis`'s `--requirepass`).
+- `docker/dockerfiles/rails.Dockerfile` and `vite.Dockerfile` hardcode `FROM chatwoot:development` (not parameterized via ARG). Any compose file using them must keep that exact tag on the `base` service and build `base` first — a YAML anchor (`<<: *base`) does NOT create a real Compose build-order dependency.
+- Hot-reload stacks with bind-mounted source on Docker Desktop for Mac: the first request after boot can take ~60s (Rails dev-mode Zeitwerk reload stats the whole bind-mounted tree), which can exhaust the small `RAILS_MAX_THREADS`-sized DB pool under concurrent requests. Not a bug — let it finish booting before assuming it's broken.
 
 ## Code Style
 

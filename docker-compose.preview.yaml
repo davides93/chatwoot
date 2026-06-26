@@ -1,0 +1,75 @@
+# Production-like preview — single build from the current source tree (RAILS_ENV=production,
+# precompiled assets, no hot-reload). Mirrors what ships to AKS/GKE (see infra repo
+# aks/prod/helm-chatwoot/values.yml) but every dependency below is a local-only container.
+#
+# Setup:
+#   cp .env.preview.example .env.preview   # then set SECRET_KEY_BASE
+#   docker compose -f docker-compose.preview.yaml build
+#   docker compose -f docker-compose.preview.yaml up -d postgres redis mailhog
+#   docker compose -f docker-compose.preview.yaml run --rm rails bundle exec rails db:chatwoot_prepare
+#   docker compose -f docker-compose.preview.yaml up -d
+#
+# App: http://localhost:3100  Mailhog UI: http://localhost:8026
+
+name: chatwoot-preview
+
+services:
+  base: &base
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    image: chatwoot-preview:latest
+    env_file: .env.preview
+    volumes:
+      - preview_storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+      - mailhog
+
+  rails:
+    <<: *base
+    ports:
+      - '3100:3000'
+    entrypoint: docker/entrypoints/rails.sh
+    command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
+    restart: unless-stopped
+
+  sidekiq:
+    <<: *base
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    ports:
+      - '5433:5432'
+    volumes:
+      - preview_postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=chatwoot_preview
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    env_file: .env.preview
+    volumes:
+      - preview_redis:/data
+    ports:
+      - '6380:6379'
+
+  mailhog:
+    image: mailhog/mailhog
+    restart: unless-stopped
+    ports:
+      - '1026:1025'
+      - '8026:8025'
+
+volumes:
+  preview_postgres:
+  preview_redis:
+  preview_storage:
