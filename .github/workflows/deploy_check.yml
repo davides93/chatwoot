@@ -17,6 +17,9 @@ permissions:
 jobs:
   deployment_check:
     name: Check Deployment
+    # Heroku review-app pipeline only exists on the canonical upstream repo —
+    # forks have no chatwoot-pr-<n>.herokuapp.com to poll, so always fails there.
+    if: github.repository == 'chatwoot/chatwoot'
     runs-on: ubuntu-latest
     steps:
       - name: Install jq
