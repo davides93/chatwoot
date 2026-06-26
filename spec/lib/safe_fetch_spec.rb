@@ -220,6 +220,28 @@ RSpec.describe SafeFetch do
         end
       end
 
+      it 'allows private IP literals when allow_private_network: true is passed per-call, even without the env var' do
+        private_url = 'http://192.168.3.21/image.png'
+        allow(Resolv).to receive(:getaddresses).with('192.168.3.21').and_return(['192.168.3.21'])
+        stub_request(:get, private_url).to_return(
+          status: 200,
+          body: File.new(Rails.root.join('spec/assets/avatar.png')),
+          headers: { 'Content-Type' => 'image/png' }
+        )
+
+        with_modified_env('SAFE_FETCH_ALLOW_PRIVATE_NETWORK' => 'false') do
+          expect { described_class.fetch(private_url, allow_private_network: true) { nil } }.not_to raise_error
+        end
+      end
+
+      it 'still blocks private IP literals when allow_private_network is omitted, even with other options passed' do
+        with_modified_env('SAFE_FETCH_ALLOW_PRIVATE_NETWORK' => 'false') do
+          expect { described_class.fetch('http://10.0.0.1/secret', method: :post, validate_content_type: false) { nil } }.to raise_error do |error|
+            expect(error.class.name).to eq('SafeFetch::UnsafeUrlError')
+          end
+        end
+      end
+
       it 'allows private hostnames when private network access is enabled' do
         private_url = 'http://internal-webhook-service/image.png'
         allow(Resolv).to receive(:getaddresses).with('internal-webhook-service').and_return(['10.0.0.5'])

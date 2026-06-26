@@ -84,6 +84,12 @@
   display_title: 'Webhook request timeout (seconds)'
   description: 'Maximum time Chatwoot waits for a webhook response before failing the request'
   locked: false
+- name: AGENT_BOT_WEBHOOK_ALLOW_PRIVATE_NETWORK
+  value: false
+  display_title: 'Allow Agent Bot webhooks to target private-network URLs'
+  description: 'When enabled, Agent Bot webhook deliveries (only) may target internal/private-network hosts (e.g. Kubernetes service DNS). Other webhook and fetch paths are unaffected. Off by default — enable only for self-hosted installs running trusted, admin-configured Agent Bots against internal services.'
+  locked: false
+  type: boolean
 - name: DIRECT_UPLOADS_ENABLED
   type: boolean
   value: false
